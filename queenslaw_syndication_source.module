@@ -1,0 +1,90 @@
+<?php
+
+use Drupal\Core\Link;
+use Drupal\Core\Url;
+
+function queenslaw_syndication_source_theme($existing, $type, $theme, $path) {
+  return [
+    'queenslaw_syndication_source_uuid' => [
+      'variables' => [
+        'text' => NULL,
+      ],
+    ],
+  ];
+}
+
+function _queenslaw_syndication_source_data($type, $parameters = []) {
+  $data = [];
+  $valid_types = [
+    'block_content' => 'block_content',
+    'person' => '',
+  ];
+  if (($type) && (array_key_exists($type, $valid_types))) {
+    $uuids = [];
+    if ($type == 'block_content') {
+      if (isset($parameters['uuid'])) $uuids[] = $parameters['uuid'];
+      else {
+        $query = \Drupal::database()->select($valid_types[$type], 't')
+          ->fields('t', ['uuid']);
+        $result = $query->execute();
+        while ($item = $result->fetchAssoc()) {
+          if (isset($item['uuid']) && ($item['uuid'])) $uuids[] = $item['uuid'];
+        }
+      }
+      foreach ($uuids as $uuid) {
+        if ($block_content = \Drupal::service('entity.repository')->loadEntityByUuid('block_content', $uuid)) {
+          $block_content_view = entity_view($block_content, 'default');
+          $block_content_render = render($block_content_view);
+          $data[] = [
+            'id' => $block_content->id(),
+            'uuid' => $uuid,
+            'label' => $block_content->label(),
+            'content' => $block_content_render->__toString(),
+          ];
+        }
+      }
+    }
+    elseif ($type == 'person') {
+      $nodes = [];
+      // the "all instructors" list is handled by a view at
+      // "/syndication-source-view/person"), and directories must be filtered by the
+      // person type (term) ID.
+      if (isset($parameters['uuid'])) {
+        $view_mode = 'syndicated';
+        if ($node = \Drupal::service('entity.repository')->loadEntityByUuid('node', $parameters['uuid'])) $nodes[] = $node;
+      }
+      elseif (isset($parameters['display']) && (isset($parameters['tids']))) {
+        $view_mode = 'teaser';
+        if ($view_result = views_get_view_result('people', $parameters['display'], $parameters['tids'])) {
+          foreach ($view_result as $view_item) {
+            if (isset($view_item->_entity)) $nodes[] = $view_item->_entity;
+          }
+        }
+      }
+      if (!empty($nodes)) {
+        $link_options = [
+          'absolute' => TRUE,
+        ];
+        $absolute_base_path = \Drupal::request()->getSchemeAndHttpHost();
+        foreach ($nodes as $node) {
+          $title = $node->getTitle();
+          $linked_title = Link::fromTextAndUrl($title, $node->toUrl('canonical', $link_options))->toString();
+          $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
+          $storage = \Drupal::entityTypeManager()->getStorage('node');
+          $build = $view_builder->view($node, $view_mode);
+          $content = render($build);
+          $content = str_replace('href="/', "href=\"{$absolute_base_path}/", $content);
+          $read_more = Link::fromTextAndUrl(t('More about @title', ['@title' => $title]), $node->toUrl('canonical', $link_options))->toString();
+          $data[] = [
+            'id' => $node->id(),
+            'title' => $title,
+            'linked_title' => $linked_title,
+            'content' => $content,
+            'read_more' => $read_more,
+          ];
+        }
+      }
+    }
+  }
+  return $data;
+}

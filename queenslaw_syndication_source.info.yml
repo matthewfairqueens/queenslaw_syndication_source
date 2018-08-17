@@ -1,0 +1,5 @@
+name: "Queen's University Faculty of Law Syndication source"
+description: "Syndication source functionality for the Queen's University Faculty of Law website."
+package: "Queen's University Faculty of Law"
+type: module
+core: 8.x

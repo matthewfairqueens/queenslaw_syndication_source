@@ -1,0 +1,8 @@
+queenslaw_syndication_source:
+  path: '/syndication-source/{type}/{parameters}'
+  defaults:
+    _controller: '\Drupal\queenslaw_syndication_source\Controller\QueensLawSyndicationSourceController::data'
+    type: ''
+    parameters: ''
+  requirements:
+    _permission: 'access content'
