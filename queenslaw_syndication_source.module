@@ -67,21 +67,24 @@ function _queenslaw_syndication_source_data($type, $parameters = []) {
         ];
         $absolute_base_path = \Drupal::request()->getSchemeAndHttpHost();
         foreach ($nodes as $node) {
-          $title = $node->getTitle();
-          $linked_title = Link::fromTextAndUrl($title, $node->toUrl('canonical', $link_options))->toString();
-          $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
-          $storage = \Drupal::entityTypeManager()->getStorage('node');
-          $build = $view_builder->view($node, $view_mode);
-          $content = render($build);
-          $content = str_replace('href="/', "href=\"{$absolute_base_path}/", $content);
-          $read_more = Link::fromTextAndUrl(t('More about @title', ['@title' => $title]), $node->toUrl('canonical', $link_options))->toString();
-          $data[] = [
-            'id' => $node->id(),
-            'title' => $title,
-            'linked_title' => $linked_title,
-            'content' => $content,
-            'read_more' => $read_more,
-          ];
+          $id = $node->id();
+          if (!isset($data[$id])) {
+            $title = $node->getTitle();
+            $linked_title = Link::fromTextAndUrl($title, $node->toUrl('canonical', $link_options))->toString();
+            $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
+            $storage = \Drupal::entityTypeManager()->getStorage('node');
+            $build = $view_builder->view($node, $view_mode);
+            $content = render($build);
+            $content = str_replace('href="/', "href=\"{$absolute_base_path}/", $content);
+            $read_more = Link::fromTextAndUrl(t('More about @title', ['@title' => $title]), $node->toUrl('canonical', $link_options))->toString();
+            $data[$id] = [
+              'id' => $id,
+              'title' => $title,
+              'linked_title' => $linked_title,
+              'content' => $content,
+              'read_more' => $read_more,
+            ];
+          }
         }
       }
     }
